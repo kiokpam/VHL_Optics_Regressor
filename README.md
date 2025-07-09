@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-VHL_Optics là một dự án AI được thiết kế để phân tích dữ liệu quang học từ các hình ảnh thu thập được từ nhiều thiết bị di động khác nhau. Dự án cung cấp các công cụ để xử lý dữ liệu, phân tích hình ảnh, trích xuất đặc trưng và huấn luyện các mô hình học máy nhằm phân loại và dự đoán các thông số quang học.
+VHL_Optics_Regressor là một dự án AI được thiết kế để phân tích dữ liệu quang học từ các hình ảnh thu thập được từ nhiều thiết bị di động khác nhau. Dự án cung cấp các công cụ để xử lý dữ liệu, phân tích hình ảnh, trích xuất đặc trưng và huấn luyện các mô hình học máy nhằm dự đoán nồng độ chất từ hình ảnh.
 
 ## Tính năng chính
 
@@ -15,8 +15,8 @@ VHL_Optics là một dự án AI được thiết kế để phân tích dữ li
    - Sử dụng các kỹ thuật như GLCM, entropy, và histogram màu.
 
 3. **Huấn luyện mô hình**:
-   - Huấn luyện các mô hình phân loại và hồi quy dựa trên các đặc trưng đã trích xuất.
-   - Sử dụng các thuật toán như Random Forest để phân tích dữ liệu.
+   - Huấn luyện các mô hình hồi quy dựa trên các đặc trưng đã trích xuất.
+   - Sử dụng các thuật toán như Random Forest và XGBoost để phân tích dữ liệu.
 
 4. **Pipeline tự động**:
    - Thực hiện toàn bộ quy trình từ xử lý dữ liệu, trích xuất đặc trưng đến huấn luyện mô hình chỉ với một lệnh duy nhất.
@@ -58,20 +58,20 @@ VHL_Optics là một dự án AI được thiết kế để phân tích dữ li
 1. Chạy toàn bộ pipeline
    Chạy toàn bộ quy trình xử lý dữ liệu, trích xuất đặc trưng và huấn luyện mô hình bằng lệnh sau:
    ```bash
-   python [main.py]
+   python src/main.py e2e
    ```
 2. Thực hiện từng bước riêng lẻ
    - **Xử lý dữ liệu**:
       ```bash
-      python src/processing.py
+      python src/main.py process
       ```
    - **Trích xuất đặc trưng**:
       ```bash
-      python src/normalize.py
+      python src/main.py feature
       ```
    - **Huấn luyện mô hình**:
       ```bash
-      python src/model.py
+      python src/main.py train
       ```
 
 ## Yêu cầu hệ thống
