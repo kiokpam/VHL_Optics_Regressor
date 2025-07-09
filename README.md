@@ -1,4 +1,4 @@
-# VHL_Optics
+# VHL_Optics_Regressor
 
 ## Tổng quan
 
@@ -45,7 +45,7 @@ VHL_Optics_Regressor là một dự án AI được thiết kế để phân tí
 1. **Clone dự án**:
    ```bash
    git clone <repository-url>
-   cd VHL_Optics
+   cd VHL_Optics_Regressor
    ```
 2. **Cài đặt các thư viện cần thiết**:
    ```bash
