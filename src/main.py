@@ -7,7 +7,7 @@ from config import DATA_DIR, META_COLORS
 from loading import create_meta_data
 from processing import process_data
 from normalize import getFeature
-from model import train_regressors
+from model import train_both_pipelines
 from predict import predict_regression
 
 
@@ -30,12 +30,13 @@ def e2e_pipeline() -> None:
     getFeature(
         df_path=META_COLORS,
         dir_path=os.path.join(DATA_DIR, 'square image'),
-        out_path=os.path.join(DATA_DIR, 'csv')
+        out_path=os.path.join(DATA_DIR, 'csv'),
+        use_square_background=True
     )
     print('Feature Extraction Success!')
 
     # 4) Train regressors
-    train_regressors(
+    train_both_pipelines(
         meta_path=META_COLORS,
         dir_path=os.path.join(DATA_DIR, 'csv'),
         out_path=os.path.join(DATA_DIR, 'models'),
@@ -54,7 +55,8 @@ def feature_pipeline() -> None:
     getFeature(
         df_path=META_COLORS,
         dir_path=os.path.join(DATA_DIR, 'square image'),
-        out_path=os.path.join(DATA_DIR, 'csv')
+        out_path=os.path.join(DATA_DIR, 'csv'),
+        use_square_background=True
     )
     print('Feature Extraction Completed.')
 
@@ -65,7 +67,7 @@ def train_pipeline() -> None:
     """
     print('Starting training only...')
     try:
-        train_regressors(
+        train_both_pipelines(
             meta_path=META_COLORS,
             dir_path=os.path.join(DATA_DIR, 'csv'),
             out_path=os.path.join(DATA_DIR, 'models'),

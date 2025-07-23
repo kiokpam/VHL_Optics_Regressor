@@ -2,7 +2,10 @@ import os
 import glob
 import joblib
 import pandas as pd
-from sklearn.model_selection import train_test_split
+
+from sklearn.model_selection import train_test_split, KFold, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.ensemble import RandomForestRegressor
@@ -10,87 +13,115 @@ from xgboost import XGBRegressor
 
 from config import DATA_DIR, META_COLORS
 
-
-def train_regressors(
-    meta_path: str = None,
-    dir_path: str = None,
-    out_path: str = None,
-    test_size: float = 0.2,
-    val_size: float = 0.25,
-    random_state: int = 42
-) -> None:
-    """
-    Train RandomForest and XGBoost regressors for each phone listed in metadata.
-
-    Splits: test=test_size of full, val=val_size of remaining.
-    Evaluates on val/test sets and saves models + scalers.
-    """
-    if dir_path is None:
-        dir_path = os.path.join(DATA_DIR, 'csv')
-    if meta_path is None:
-        meta_path = META_COLORS
-    if out_path is None:
-        out_path = os.path.join(DATA_DIR, 'models')
+def train_both_pipelines(
+    meta_path=None,
+    dir_path=None,
+    out_path=None,
+    test_size=0.2,
+    val_size: float = None,
+    n_splits=5,
+    random_state=42
+):
+    dir_path  = dir_path or os.path.join(DATA_DIR, 'csv')
+    meta_path = meta_path or META_COLORS
+    out_path  = out_path or os.path.join(DATA_DIR, 'models')
     os.makedirs(out_path, exist_ok=True)
 
     df_meta = pd.read_csv(meta_path)
-    phones = df_meta['Phones'].astype(str).unique()
+    df_meta['norm'] = df_meta['Phones'].str.lower()
+    norms = df_meta['norm'].unique()
+    phone_map = {n: df_meta.loc[df_meta['norm']==n, 'Phones'].iloc[0] for n in norms}
 
-    for phone in phones:
-        # find regression CSV case-insensitive
-        pattern = os.path.join(dir_path, f"rgs_*{phone.lower()}*.csv")
-        matches = glob.glob(pattern)
-        if not matches:
-            print(f"[Skipping] No CSV for phone '{phone}' (pattern: {pattern})")
+    cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    for norm in norms:
+        display = phone_map[norm]
+        pattern = os.path.join(dir_path, f"features_*{norm}*.csv")
+        files = glob.glob(pattern)
+        if not files:
+            print(f"[Skipping] no data for {display}")
             continue
-        reg_path = matches[0]
-        df = pd.read_csv(reg_path)
 
-        # prepare data
-        X = df.drop(columns=['id_img', 'ppm'], errors='ignore')
+        df = pd.read_csv(files[0])
+        if df.empty or 'ppm' not in df.columns:
+            print(f"[Skipping] invalid CSV for {display}")
+            continue
+
+        X = df.drop(columns=['id_img','ppm'], errors='ignore')
         y = df['ppm']
 
-        # split
-        X_train_full, X_test, y_train_full, y_test = train_test_split(
+        # 1) Tách test set
+        X_tr_full, X_test, y_tr_full, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train_full, y_train_full, test_size=val_size, random_state=random_state
+
+        # 2) Common preprocessing steps
+        select = SelectKBest(score_func=f_regression)
+        scale  = StandardScaler()
+
+        # --- RandomForest pipeline & grid ---
+        pipe_rf = Pipeline([
+            ("select", select),
+            ("scale", scale),
+            ("model", RandomForestRegressor(random_state=random_state))
+        ])
+        rf_param_grid = {
+            "select__k": [10, 20, 30, "all"],
+            "model__n_estimators": [100, 200, 300],
+            "model__max_depth": [None, 10, 20],
+            "model__min_samples_split": [2, 5],
+            "model__min_samples_leaf": [1, 2]
+        }
+        grid_rf = GridSearchCV(
+            pipe_rf,
+            rf_param_grid,
+            cv=cv,
+            scoring='neg_mean_squared_error',
+            n_jobs=-1,
+            verbose=1
         )
+        grid_rf.fit(X_tr_full, y_tr_full)
+        best_rf_pipe = grid_rf.best_estimator_
+        print(f"[{display}] RF best params: {grid_rf.best_params_}")
 
-        # scale
-        scaler = StandardScaler().fit(X_train)
-        X_train_s = scaler.transform(X_train)
-        X_val_s   = scaler.transform(X_val)
-        X_test_s  = scaler.transform(X_test)
-
-        # init models
-        rf = RandomForestRegressor(random_state=random_state)
-        xgb = XGBRegressor(
-            objective='reg:squarederror', random_state=random_state
+        # --- XGB pipeline & grid ---
+        pipe_xgb = Pipeline([
+            ("select", select),
+            ("scale", scale),
+            ("model", XGBRegressor(objective='reg:squarederror', random_state=random_state))
+        ])
+        xgb_param_grid = {
+            "select__k": [10, 20, 30, "all"],
+            "model__n_estimators": [100, 200],
+            "model__max_depth": [3, 6, 10],
+            "model__learning_rate": [0.01, 0.1],
+            "model__subsample": [0.8, 1.0],
+            "model__colsample_bytree": [0.8, 1.0]
+        }
+        grid_xgb = GridSearchCV(
+            pipe_xgb,
+            xgb_param_grid,
+            cv=cv,
+            scoring='neg_mean_squared_error',
+            n_jobs=-1,
+            verbose=1
         )
+        grid_xgb.fit(X_tr_full, y_tr_full)
+        best_xgb_pipe = grid_xgb.best_estimator_
+        print(f"[{display}] XGB best params: {grid_xgb.best_params_}")
 
-        # train
-        rf.fit(X_train_s, y_train)
-        xgb.fit(X_train_s, y_train)
+        # 3) Đánh giá final trên test set
+        for name, model in [("RF", best_rf_pipe), ("XGB", best_xgb_pipe)]:
+            preds = model.predict(X_test)
+            mse = mean_squared_error(y_test, preds)
+            mae = mean_absolute_error(y_test, preds)
+            r2  = r2_score(y_test, preds)
+            print(f"[{display}] {name} Test -> MSE: {mse:.4f}, MAE: {mae:.4f}, R2: {r2:.4f}")
 
-        # eval
-        def eval_model(m, Xs, ys, split):
-            preds = m.predict(Xs)
-            mse = mean_squared_error(ys, preds)
-            mae = mean_absolute_error(ys, preds)
-            r2  = r2_score(ys, preds)
-            print(f"[{phone}] {m.__class__.__name__} {split} -> MSE: {mse:.4f}, MAE: {mae:.4f}, R2: {r2:.4f}")
+        # 4) Lưu hai pipeline
+        joblib.dump(best_rf_pipe,  os.path.join(out_path, f"pipe_rf_{display}.pkl"))
+        joblib.dump(best_xgb_pipe, os.path.join(out_path, f"pipe_xgb_{display}.pkl"))
 
-        print(f"\n--- Evaluating {phone} ---")
-        for model in (rf, xgb):
-            eval_model(model, X_val_s, y_val, 'Validation')
-            eval_model(model, X_test_s, y_test, 'Test')
-
-        # save
-        joblib.dump(scaler, os.path.join(out_path, f"regressor_scaler_{phone}.pkl"))
-        joblib.dump(rf,     os.path.join(out_path, f"regressor_rf_{phone}.pkl"))
-        joblib.dump(xgb,    os.path.join(out_path, f"regressor_xgb_{phone}.pkl"))
 
 if __name__ == '__main__':
-    train_regressors()
+    train_both_pipelines()

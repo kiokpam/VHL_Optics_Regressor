@@ -1,49 +1,45 @@
+import os
 import streamlit as st
 import pandas as pd
-import os
 
-from config import DATA_DIR, META_COLORS
-from predict import predict_regression
+from predict import predict_regression, predict_test_set
+from config import META_COLORS, DATA_DIR
 
-# Streamlit app for AI_Optics ppm prediction
+st.title("AI Optics: PPM Prediction")
 
-def main():
-    st.set_page_config(page_title="AI_Optics PPM Prediction", layout="wide")
-    st.title("AI_Optics PPM Prediction")
-    st.markdown("Upload an image, select your phone type and regression model to predict ppm concentration.")
+# --- Single Image Prediction ---
+st.sidebar.header("Single Image Prediction")
+image_file    = st.sidebar.file_uploader("Upload an image", type=['jpg','png','jpeg'])
+phone_choice  = st.sidebar.selectbox("Phone model", pd.read_csv(META_COLORS)['Phones'].unique())
+model_choice  = st.sidebar.selectbox("Model", ['RF', 'XGB'])
 
-    # Load phone list from metadata
-    try:
-        df_meta = pd.read_csv(META_COLORS)
-        phones = sorted(df_meta['Phones'].astype(str).unique())
-    except Exception as e:
-        st.error(f"Failed to load metadata: {e}")
-        return
+if st.sidebar.button("Predict Single Image"):
+    if image_file is not None:
+        temp_path = os.path.join(DATA_DIR, 'temp_predict', image_file.name)
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+        with open(temp_path, 'wb') as f:
+            f.write(image_file.getbuffer())
+        try:
+            pred = predict_regression(temp_path, phone_choice, model_choice)
+            st.sidebar.success(f"Predicted PPM: {pred:.2f}")
+        except Exception as e:
+            st.sidebar.error(f"Prediction error: {e}")
+    else:
+        st.sidebar.warning("Please upload an image first.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        phone = st.selectbox("Select phone type", phones)
-    with col2:
-        model_choice = st.selectbox("Select regression model", ["RandomForest", "XGBoost"])
+# --- Batch Prediction on Test Sets ---
+st.header("Batch Prediction on Test Sets")
+if st.button("Run Batch Prediction for All Phones"):
+    df_meta = pd.read_csv(META_COLORS)
+    output_dir = os.path.join(DATA_DIR, 'batch_predictions')
+    os.makedirs(output_dir, exist_ok=True)
 
-    uploaded_file = st.file_uploader("Upload image file", type=["jpg", "jpeg", "png", "bmp"])
+    for phone in df_meta['Phones'].unique():
+        st.write(f"Processing {phone}...")
+        try:
+            predict_test_set(phone, output_dir=output_dir)
+            st.write(f"  • Saved predictions_{phone}.csv")
+        except Exception as e:
+            st.error(f"Error for {phone}: {e}")
 
-    if uploaded_file:
-        # Save upload to temp folder
-        tmp_dir = os.path.join(DATA_DIR, "temp_uploads")
-        os.makedirs(tmp_dir, exist_ok=True)
-        img_path = os.path.join(tmp_dir, uploaded_file.name)
-        with open(img_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-
-        st.image(img_path, caption="Uploaded Image", use_column_width=True)
-
-        if st.button("Predict ppm"):
-            try:
-                ppm = predict_regression(img_path, phone, model_choice)
-                st.success(f"Predicted concentration: {ppm:.2f} ppm")
-            except Exception as e:
-                st.error(f"Prediction error: {e}")
-
-if __name__ == "__main__":
-    main()
+    st.success(f"Done! CSV files for each phone are in:\n{output_dir}")
