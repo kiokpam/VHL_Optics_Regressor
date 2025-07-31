@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+joblib
+opencv-python
+numpy
+pandas
+scikit-image
+xgboost
+matplotlib
+tqdm
+scikit-learn==1.7.0
+python-multipart

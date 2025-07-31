@@ -1,0 +1,40 @@
+openapi: 3.0.0
+info:
+  title: AI Optics PPM Prediction API
+  version: 1.0.0
+paths:
+  /predict/:
+    post:
+      summary: Dự đoán nồng độ ppm từ ảnh
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  description: Tên điện thoại (vd. RedmiA1)
+                file:
+                  type: string
+                  format: binary
+                  description: Ảnh JPEG/PNG cần dự đoán
+      responses:
+        '200':
+          description: Kết quả dự đoán
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone:
+                    type: string
+                  ppm:
+                    type: number
+        '400':
+          description: Yêu cầu không hợp lệ
+        '404':
+          description: Phone không tồn tại
+        '500':
+          description: Lỗi server

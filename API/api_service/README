@@ -1,0 +1,49 @@
+# AI Optics PPM Prediction API
+
+## Mô tả
+
+Service RESTful dùng FastAPI để dự đoán nồng độ ppm từ ảnh. Hỗ trợ 6 loại điện thoại với các model XGB đã huấn luyện.
+
+## Cấu trúc project
+
+```
+API/
+├── data/
+│ └── models/ # chứa 6 file pipe_xgb_<Phone>.pkl
+└── api_service/
+│ └── __init__.py
+│ └── api.py          # FASTAPI sever
+│ └── config.py
+│ └── roi.py
+│ └── normalize.py
+│ └── requirements.txt
+│ └── dockerfile
+│ └── openapi.yaml
+│ └── squares.py
+│ └── loading.py
+```
+
+## Cài đặt và chạy
+
+# 1. Tạo venv và cài dependencies
+python3 -m venv venv
+source venv/bin/activate  # (Windows: venv\Scripts\activate)
+pip install -r api_service/requirements.txt
+
+# 2. Chạy server
+uvicorn api_service.api:app \
+    --reload \
+    --host 127.0.0.1 \
+    --port 8000
+```
+## Swagger UI
+http://127.0.0.1:8000/docs
+
+## Test nhanh
+
+```bash
+curl -X POST "http://127.0.0.1:8000/predict/" \
+     -F "phone=RedmiA1" \
+     -F "file=@/path/to/image.jpg"
+```
+

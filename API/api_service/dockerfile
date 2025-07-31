@@ -1,0 +1,17 @@
+# 1. Chỉ định base image
+FROM python:3.11-slim
+
+# 2. Thiết lập thư mục làm việc bên trong container
+WORKDIR /app
+
+# 3. Copy mã nguồn và file cấu hình vào container
+COPY . /app
+
+# 4. Cài đặt dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 5. Mở port 8000
+EXPOSE 8000
+
+# 6. Lệnh khởi chạy khi container start
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
