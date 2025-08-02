@@ -1,82 +1,131 @@
-# VHL_Optics_Regressor
+Đây là nội dung **README.md** mới đã được cập nhật cho phù hợp với các thay đổi của dự án:
 
-## Tổng quan
+```markdown
+## VHL Optics – PPM Prediction (Global Model)
 
-VHL_Optics_Regressor là một dự án AI được thiết kế để phân tích dữ liệu quang học từ các hình ảnh thu thập được từ nhiều thiết bị di động khác nhau. Dự án cung cấp các công cụ để xử lý dữ liệu, phân tích hình ảnh, trích xuất đặc trưng và huấn luyện các mô hình học máy nhằm dự đoán nồng độ chất từ hình ảnh.
+**VHL Optics** là một dự án AI nhằm dự đoán nồng độ (ppm) của mẫu hóa chất dựa trên ảnh chụp từ nhiều thiết bị di động khác nhau. Ở phiên bản đầu, mỗi dòng máy được huấn luyện một mô hình riêng; tuy nhiên phiên bản hiện tại đã được **refactor** để sử dụng **một mô hình chung** cho toàn bộ thiết bị. Thông tin về điện thoại không còn là đặc trưng huấn luyện, giúp đơn giản hóa quy trình và mở rộng dễ dàng cho các thiết bị mới.
 
-## Tính năng chính
+### Điểm nổi bật
 
-1. **Xử lý dữ liệu quang học**:
-   - Tổ chức và xử lý dữ liệu hình ảnh từ các thiết bị di động.
-   - Tách vùng quan tâm (ROI) và chuẩn hóa hình ảnh.
+- **Xử lý dữ liệu tự động**: quét dữ liệu thô, tạo file metadata và cắt vùng quan tâm (ROI) để chuẩn hóa ảnh.
+- **Trích xuất đặc trưng hồi quy**: tính toán thống kê kênh màu, contrast GLCM, entropy, mật độ cạnh, v.v. cho mỗi ảnh.
+- **Mô hình hồi quy duy nhất**: sử dụng RandomForest hoặc XGBoost để học từ toàn bộ dữ liệu, không cần cột điện thoại.
+- **Giao diện trực quan**: hỗ trợ Streamlit để người dùng upload ảnh và nhận kết quả dự đoán ppm ngay lập tức.
+- **Batch prediction**: dự đoán hàng loạt từ file đặc trưng tổng hợp và lưu kết quả ra CSV.
 
-2. **Trích xuất đặc trưng**:
-   - Trích xuất các đặc trưng từ hình ảnh để phục vụ cho các bài toán phân loại và hồi quy.
-   - Sử dụng các kỹ thuật như GLCM, entropy, và histogram màu.
+### Cấu trúc thư mục
 
-3. **Huấn luyện mô hình**:
-   - Huấn luyện các mô hình hồi quy dựa trên các đặc trưng đã trích xuất.
-   - Sử dụng các thuật toán như Random Forest và XGBoost để phân tích dữ liệu.
-
-4. **Pipeline tự động**:
-   - Thực hiện toàn bộ quy trình từ xử lý dữ liệu, trích xuất đặc trưng đến huấn luyện mô hình chỉ với một lệnh duy nhất.
-
-## Cấu trúc dự án
 ```
-   VHL_Optics/ 
-   ├── src/ 
-   │ ├── __init__.py      # Tệp khởi tạo module 
-   │ ├── config.py        # Cấu hình dự án 
-   │ ├── loading.py       # Tải và tạo metadata 
-   │ ├── processing.py    # Xử lý và tổ chức dữ liệu hình ảnh 
-   │ ├── normalize.py     # Trích xuất đặc trưng từ hình ảnh 
-   │ ├── model.py         # Huấn luyện mô hình phân loại và hồi quy 
-   │ ├── roi.py           # Xử lý vùng quan tâm (ROI) 
-   │ ├── squares.py       # Phát hiện các vùng hình vuông trong hình ảnh 
-   │ ├── main.py          # Pipeline tự động 
-   ├── data/              # Thư mục chứa dữ liệu 
-   │ ├── full/            # Dữ liệu hình ảnh gốc 
-   ├── requirements.txt   # Danh sách các thư viện cần thiết 
-   ├── README.md          # Tài liệu dự án 
-   ├── LICENSE            # Giấy phép sử dụng
+
+├── app.py           # Ứng dụng Streamlit đơn giản cho dự đoán đơn lẻ và batch
+├── main.py          # Entry point: e2e pipeline, feature extraction, training, Streamlit
+├── config.py        # Định nghĩa đường dẫn dữ liệu và hằng số
+├── loading.py       # Tạo và nạp metadata
+├── processing.py    # Xử lý ảnh, trích xuất ROI và ảnh vuông
+├── normalize.py     # Trích xuất đặc trưng hồi quy (không chứa phone)
+├── model.py         # Huấn luyện mô hình hồi quy (per‑phone & global)
+├── predict.py       # Dự đoán ppm (đơn lẻ & batch)
+├── roi.py           # Các hàm hỗ trợ cắt ROI
+├── squares.py       # Phát hiện contour hình vuông
+├── data/            # (tự tạo) chứa dữ liệu thô và ảnh đã xử lý
+
+````
+
+### Cài đặt
+
+1. **Clone dự án** và cài đặt các thư viện cần thiết:
+
+```bash
+git clone <repository-url>
+cd VHL_Optics_Regressor
+pip install -r requirements.txt
+````
+
+Nếu không có file `requirements.txt`, cài đặt tối thiểu các thư viện:
+
 ```
-## Hướng dẫn cài đặt
+numpy
+pandas
+opencv-python
+scikit-learn
+xgboost
+streamlit
+scikit-image
+tqdm
+```
 
-1. **Clone dự án**:
-   ```bash
-   git clone <repository-url>
-   cd VHL_Optics_Regressor
-   ```
-2. **Cài đặt các thư viện cần thiết**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Chuẩn bị dữ liệu**:
-   Tạo thư mục data/full và đặt dữ liệu hình ảnh gốc vào đó.
+2. **Chuẩn bị dữ liệu**: đặt dữ liệu ảnh gốc vào `data/full/HP5_data` theo cấu trúc: *loại hóa chất / điện thoại / lần chụp / ảnh*. Ứng dụng sẽ tự động quét và tạo metadata.
 
-## Hướng dẫn sử dụng
-1. Chạy toàn bộ pipeline
-   Chạy toàn bộ quy trình xử lý dữ liệu, trích xuất đặc trưng và huấn luyện mô hình bằng lệnh sau:
-   ```bash
-   python src/main.py e2e
-   ```
-2. Thực hiện từng bước riêng lẻ
-   - **Xử lý dữ liệu**:
-      ```bash
-      python src/main.py process
-      ```
-   - **Trích xuất đặc trưng**:
-      ```bash
-      python src/main.py feature
-      ```
-   - **Huấn luyện mô hình**:
-      ```bash
-      python src/main.py train
-      ```
+### Sử dụng
 
-## Yêu cầu hệ thống
- - Python 3.9 hoặc cao hơn.
- - Các thư viện được liệt kê trong `requirements.txt`.
+#### Chạy toàn bộ pipeline (e2e)
 
-## Giấy phép
-Dự án được cấp phép theo MIT License.
+Lệnh sau sẽ tạo metadata, xử lý ảnh, trích xuất đặc trưng và huấn luyện mô hình chung:
+
+```bash
+python main.py e2e
+```
+
+Sau khi chạy, các file đặc trưng sẽ được lưu trong `data/csv/features_all.csv` và các mô hình huấn luyện được lưu trong `data/models/`.
+
+#### Trích xuất đặc trưng và huấn luyện riêng
+
+Bạn có thể chạy từng bước riêng biệt:
+
+```bash
+# Trích xuất đặc trưng (khi đã có ảnh vuông)
+python main.py feature
+
+# Huấn luyện mô hình chung (khi đã có features_all.csv)
+python main.py train
+```
+
+#### Dự đoán ppm cho một ảnh
+
+Sử dụng giao diện Streamlit đơn giản:
+
+```bash
+streamlit run app.py
+```
+
+Hoặc chạy trực tiếp `python main.py` (mặc định sẽ mở giao diện Streamlit). Người dùng chỉ cần upload ảnh, chọn mô hình (**RF** hoặc **XGB**) và nhận kết quả ppm. Không cần nhập dòng máy.
+
+Bạn cũng có thể gọi hàm dự đoán từ mã Python:
+
+```python
+from predict import predict_regression_general
+
+ppm = predict_regression_general('path/to/image.jpg', model_choice='RF')
+print(f"Predicted ppm: {ppm:.2f}")
+```
+
+#### Batch prediction
+
+Để dự đoán hàng loạt, chạy từ Streamlit (`app.py`) hoặc sử dụng hàm:
+
+```python
+from predict import predict_test_set_general
+
+results = predict_test_set_general(output_dir='batch_predictions')
+print(results.head())
+```
+
+Kết quả được lưu vào `predictions_general.csv` với cột: `id_img`, `true_ppm`, `pred_rf_ppm`, `pred_xgb_ppm`, `diff_rf_pct`, `diff_xgb_pct`.
+
+### Ghi chú về thông tin điện thoại
+
+Phiên bản hiện tại **không sử dụng** bất kỳ thông tin nào về dòng máy làm đặc trưng huấn luyện. Các phiên bản trước huấn luyện riêng từng thiết bị, nhưng điều đó gây khó khăn khi gặp thiết bị mới. Mô hình chung đơn giản hơn và áp dụng được cho mọi ảnh.
+
+### Yêu cầu hệ thống
+
+* Python 3.8 trở lên.
+* Bộ nhớ đủ để xử lý ảnh và huấn luyện mô hình (nên dùng môi trường có GPU cho XGBoost nếu dữ liệu lớn).
+
+### Giấy phép
+
+Dự án được phân phối theo giấy phép MIT. Bạn có thể tự do sử dụng và chỉnh sửa mã nguồn.
+
+```
+
+README này đã được viết lại để phản ánh mô hình chung không cần dữ liệu điện thoại và chỉ tập trung vào bài toán hồi quy nồng độ ppm.
+```

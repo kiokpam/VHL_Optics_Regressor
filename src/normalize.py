@@ -72,7 +72,7 @@ class FeatureExtractor:
         mean_h = float(np.mean(h))
         feats['hue_sat_ratio'] = float(mean_h / (feats['mean_sat'] + 1e-6))
 
-        # Delta & ratio features
+        # Delta & ratio features (optional background-based)
         if use_square_background:
             extras = self._compute_bg_delta_ratio(img_rgb)
             feats.update(extras)
@@ -161,8 +161,9 @@ def getFeature(
         use_square_background: bool = False
     ) -> None:
     """
-    Extract regression features (with optional square background normalization)
-    from images listed in metadata CSV.
+    Trích xuất đặc trưng hồi quy từ ảnh theo metadata. Kết quả được lưu
+    vào các file CSV riêng theo từng dòng máy (features_<phone>.csv) và
+    một file tổng hợp (features_all.csv) không chứa thông tin điện thoại.
     """
     if df_path is None:
         df_path = META_COLORS
@@ -175,12 +176,15 @@ def getFeature(
 
     os.makedirs(out_path, exist_ok=True)
 
-    # preserve display name, normalize keys
+    # giữ lại tên hiển thị và chuẩn hoá khóa
     df['PhoneDisplay'] = df['Phones']
     df['Phones_norm']  = df['Phones'].str.lower()
 
     extractor  = FeatureExtractor()
     phone_dirs = os.listdir(dir_path)
+
+    # tổng hợp đặc trưng toàn bộ thiết bị
+    all_feats = []
 
     for norm in df['Phones_norm'].unique():
         display       = df.loc[df['Phones_norm']==norm, 'PhoneDisplay'].iloc[0]
@@ -197,9 +201,9 @@ def getFeature(
             for _, row in df_phone.iterrows():
                 raw_cat = row['Types']
                 ppm     = row['ppm']
-                filename= row['Filename']  # use full processed filename
+                filename= row['Filename']
 
-                # match category folder containing raw_cat and "sorted"
+                # tìm thư mục chứa ảnh theo category
                 cands = [c for c in category_dirs if raw_cat.lower() in c.lower()]
                 if not cands:
                     pbar.update(1)
@@ -210,7 +214,7 @@ def getFeature(
                 base = os.path.join(phone_path, category_folder)
                 img_path = os.path.join(base, filename)
 
-                # fallback to trying extensions if needed
+                # fallback nếu thiếu đuôi
                 if not os.path.exists(img_path):
                     root, ext = os.path.splitext(filename)
                     if ext == '':
@@ -234,11 +238,21 @@ def getFeature(
                     feats_list.append(feats)
                 pbar.update(1)
 
+        # lưu file đặc trưng riêng theo điện thoại
         df_feats = pd.DataFrame(feats_list)
         if not df_feats.empty:
             df_feats.to_csv(
                 os.path.join(out_path, f'features_{display}.csv'),
                 index=False
             )
+            all_feats.extend(feats_list)
         else:
             print(f"[Skipping] No features extracted for phone '{display}', CSV not written.")
+
+    # cuối cùng, ghi file tổng hợp features_all.csv (không chứa cột phone)
+    if all_feats:
+        df_all = pd.DataFrame(all_feats)
+        df_all.to_csv(
+            os.path.join(out_path, 'features_all.csv'),
+            index=False
+        )
