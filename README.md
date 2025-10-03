@@ -1,6 +1,4 @@
-Đây là nội dung **README.md** mới đã được cập nhật cho phù hợp với các thay đổi của dự án:
 
-```markdown
 ## VHL Optics – PPM Prediction (Global Model)
 
 **VHL Optics** là một dự án AI nhằm dự đoán nồng độ (ppm) của mẫu hóa chất dựa trên ảnh chụp từ nhiều thiết bị di động khác nhau. Ở phiên bản đầu, mỗi dòng máy được huấn luyện một mô hình riêng; tuy nhiên phiên bản hiện tại đã được **refactor** để sử dụng **một mô hình chung** cho toàn bộ thiết bị. Thông tin về điện thoại không còn là đặc trưng huấn luyện, giúp đơn giản hóa quy trình và mở rộng dễ dàng cho các thiết bị mới.
@@ -28,8 +26,8 @@
 ├── roi.py           # Các hàm hỗ trợ cắt ROI
 ├── squares.py       # Phát hiện contour hình vuông
 ├── data/            # (tự tạo) chứa dữ liệu thô và ảnh đã xử lý
+```
 
-````
 
 ### Cài đặt
 
@@ -52,7 +50,7 @@ xgboost
 streamlit
 scikit-image
 tqdm
-```
+
 
 2. **Chuẩn bị dữ liệu**: đặt dữ liệu ảnh gốc vào `data/full/HP5_data` theo cấu trúc: *loại hóa chất / điện thoại / lần chụp / ảnh*. Ứng dụng sẽ tự động quét và tạo metadata.
 
