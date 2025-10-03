@@ -50,7 +50,7 @@ xgboost
 streamlit
 scikit-image
 tqdm
-
+```
 
 2. **Chuẩn bị dữ liệu**: đặt dữ liệu ảnh gốc vào `data/full/HP5_data` theo cấu trúc: *loại hóa chất / điện thoại / lần chụp / ảnh*. Ứng dụng sẽ tự động quét và tạo metadata.
 
